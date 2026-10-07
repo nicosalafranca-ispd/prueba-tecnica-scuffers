@@ -1,0 +1,26 @@
+.env
+.env.local
+node_modules
+.next
+__pycache__
+*.tsbuildinfo
+
+# temporales y de trabajo local
+~$*
+.Rhistory
+.claude/
+presentacion/_x/
+presentacion/Scuffers_Presupuesto_H2_nuevo.pptx
+
+# documentos de versiones anteriores: sus cifras ya no coinciden con el README
+CONCLUSIONES.md
+CONCLUSIONES_30.xlsx
+REVISION_CONCLUSIONES.md
+DECISIONES_DE_LIMPIEZA.md
+PROBLEMAS_DE_DATOS.md
+presentacion/build_datos.js
+presentacion/Scuffers_Problemas_de_Datos.pptx
+eda/
+sql/_anterior/
+app/scripts/verify.py
+app/scripts/verify.mts

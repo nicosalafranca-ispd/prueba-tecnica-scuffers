@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Base de datos Scuffers</title>
+<style>
+body{font-family:system-ui,Segoe UI,sans-serif;margin:0;background:#f6f5f2;color:#1f1f1f}
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px}
+h1{font-size:22px;margin:0 0 4px}p.s{margin:0 0 16px;color:#555;font-size:14px}
+svg{width:100%;height:auto;background:#fff;border:1px solid #ddd;border-radius:10px}
+.leg{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin:12px 0}
+.leg span i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+</style></head><body><div class="wrap">
+<h1>Mapa de la base de datos (Supabase / Postgres, esquema public)</h1>
+<p class="s">9 tablas + 3 vistas. Líneas continuas = claves foráneas reales. Línea discontinua = relación por texto, sin clave. ⚠ = rareza detectada en los datos.</p>
+<div class="leg">
+<span><i style="background:#2f6fb5"></i>Transacciones</span>
+<span><i style="background:#7a4fa3"></i>Clientes</span>
+<span><i style="background:#2e8b57"></i>Catálogo y opinión</span>
+<span><i style="background:#d9772b"></i>Marketing</span>
+<span><i style="background:#777"></i>Vistas (ya calculadas)</span>
+</div>
+<svg id="d" viewBox="0 0 920 800" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Segoe UI,sans-serif"></svg>
+</div>
+<script>
+const svg=document.getElementById('d'),NS='http://www.w3.org/2000/svg';
+const C={t:'#2f6fb5',c:'#7a4fa3',p:'#2e8b57',m:'#d9772b',v:'#777'};
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!==undefined)e.textContent=txt;svg.appendChild(e);return e}
+const RH=17,HH=30,W=260;
+const T={};
+function box(id,x,y,color,title,cols){
+  const h=HH+cols.length*RH+8;T[id]={x,y,h};
+  el('rect',{x,y,width:W,height:h,rx:8,fill:'#fff',stroke:color,'stroke-width':1.5});
+  el('path',{d:`M${x},${y+HH} v-${HH-8} a8,8 0 0 1 8,-8 h${W-16} a8,8 0 0 1 8,8 v${HH-8} z`,fill:color});
+  el('text',{x:x+10,y:y+20,fill:'#fff','font-size':13,'font-weight':600},title);
+  cols.forEach((c,i)=>{
+    const yy=y+HH+14+i*RH, warn=c[2]&&c[2].startsWith('!');
+    el('text',{x:x+10,y:yy,'font-size':11.5,fill:c[1]==='PK'||c[1]==='FK'?'#111':'#333','font-weight':c[1]==='PK'?700:400},c[0]);
+    el('text',{x:x+W-10,y:yy,'font-size':10.5,'text-anchor':'end',fill:warn?'#c0392b':'#777'},(c[1]&&c[1]!=='-'?c[1]+' ':'')+(c[2]?(warn?'⚠ ':'')+c[2].replace(/^!/,''):''));
+  });
+}
+function line(d,dash,label,lx,ly){
+  el('path',{d,fill:'none',stroke:'#555','stroke-width':1.3,'stroke-dasharray':dash?'5 4':'', 'marker-end':'url(#a)'});
+  if(label)el('text',{x:lx,y:ly,'font-size':10.5,fill:'#555','text-anchor':'middle'},label);
+}
+const defs=el('defs',{});const mk=document.createElementNS(NS,'marker');
+mk.setAttribute('id','a');mk.setAttribute('viewBox','0 0 10 10');mk.setAttribute('refX',9);mk.setAttribute('refY',5);mk.setAttribute('markerWidth',7);mk.setAttribute('markerHeight',7);mk.setAttribute('orient','auto-start-reverse');
+const mp=document.createElementNS(NS,'path');mp.setAttribute('d','M0,0 L10,5 L0,10 z');mp.setAttribute('fill','#555');mk.appendChild(mp);defs.appendChild(mk);
+
+// columna A x=20, B x=330, C x=640
+box('customers',20,20,C.c,'customers · 177 filas',[
+ ['id','PK','int'],['full_name','','text'],['email','','text · único'],['country','','ES 145 / DE 32'],['created_at','','date alta']]);
+box('reviews',20,190,C.p,'product_reviews · 247 filas',[
+ ['id','PK','int'],['product_id','FK','→ products'],['customer_id','FK','→ customers'],['rating','','1 a 5 · media 4,05'],['body','','texto'],['created_at','','!hasta ago-2026']]);
+box('products',20,400,C.p,'products · 24 filas',[
+ ['id','PK','int'],['name','','text'],['category','','4 categorías'],['price_cents','','tarifa actual'],['created_at','','alta en catálogo'],['active','','!3 fichas = false']]);
+
+box('orders',330,20,C.t,'orders · 767 filas (1 fila = 1 pedido)',[
+ ['id','PK','int'],['customer_id','FK','→ customers'],['channel','','!12 grafías / 7 canales'],['country','','envío ES/DE'],['status','','4 estados'],
+ ['created_at','','date (hora Madrid)'],['created_at_utc','','timestamptz'],['deleted_at','','!11 borrados lógicos'],['subtotal_cents','','!18 no cuadran'],['shipping_cents','','0 = envío gratis'],['tax_cents','','ES 21% / DE 19%'],['total_amount_cents','','subt.+envío+IVA']]);
+box('items',330,360,C.t,'order_items · 1.323 filas',[
+ ['id','PK','int'],['order_id','FK','→ orders'],['product_id','FK*','!19 sin producto'],['quantity','','1 a 7'],['unit_price_cents','','precio cobrado']]);
+
+box('op',640,20,C.t,'order_promotions · 255 filas',[
+ ['id','PK','int'],['order_id','FK','→ orders'],['promotion_id','FK','→ promotions']]);
+box('promos',640,125,C.t,'promotions · 4 filas',[
+ ['id','PK','int'],['name','','4 códigos'],['discount_pct','','5 / 10 / 15 / 20']]);
+box('refunds',640,230,C.t,'refunds · 61 filas',[
+ ['id','PK','int'],['order_id','FK','→ orders (1 por pedido)'],['amount_cents','','importe devuelto'],['reason','','motivo en texto libre'],['created_at','','date']]);
+box('spend',640,400,C.m,'marketing_spend · 967 filas',[
+ ['id','PK','int'],['channel','','5 canales de pago'],['date','','1 fila por canal y día'],['spend_raw','','!unidad variable'],['currency_unit','','!EUR o EUR_CENTS']]);
+
+// relaciones
+line('M330,76 H250','',null);
+line('M135,190 V138','',null);                      // reviews->customers (draw up)
+line('M135,326 V400','',null);                      // reviews->products
+line('M460,360 V292','',null);                      // items->orders (up)
+line('M330,420 H290 V450 H280','',null);            // items->products
+line('M640,48 H560','',null);                       // op->orders
+line('M750,95 V125','',null);                       // op->promos
+line('M640,255 H560','',null);                      // refunds->orders
+line('M560,285 L600,300 L600,430 H640','dash','channel (texto)',596,350);
+
+// vistas
+const vy=610;
+box('v1',20,vy,C.v,'v_kpis_mensuales',[['mes, pedidos, revenue_eur, ticket_medio_eur',''],['!une orders con order_promotions: duplica pedidos con 2 promos','']]);
+box('v2',330,vy,C.v,'v_top_clientes',[['id, full_name, email, pedidos, gasto_eur',''],['suma todos los estados, también cancelados','']]);
+box('v3',640,vy,C.v,'v_valoracion_producto',[['product_id, producto, categoria, resenas, valoracion_media',''],['solo productos con al menos 1 reseña','']]);
+el('text',{x:20,y:795,'font-size':10.5,fill:'#777'},'FK* = existe la columna pero no hay clave foránea declarada hacia products (de ahí los 19 ids huérfanos).');
+</script></body></html>
